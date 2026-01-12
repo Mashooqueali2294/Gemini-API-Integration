@@ -48,17 +48,34 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(None)):
     payload = await request.body()
     try:
-        # Signal ko verify karein ke ye waqayi Stripe se aaya hai
         event = stripe.Webhook.construct_event(
             payload, stripe_signature, STRIPE_WEBHOOK_SECRET
         )
     except Exception as e:
         return {"error": str(e)}
+    
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        customer_email = session["customer_details"]["email"]
+        amount = session["amount_total"] / 100
 
-    # Agar payment success ho jaye
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        print(f"💰 PAISA MIL GAYA! Customer: {session['customer_details']['email']}")
-        # Yahan aap user ko email bhej sakte hain ya database update kar sakte hain
+        print(f"DEBUG: Data collected for {customer_email}")
 
+        ai_response = get_ai_summary(
+            old_val="No Payment",
+            new_val=f"Success Payment of {amount} PKR from {customer_email}"
+        )
+
+        print(f"DEBUG: AI Response is: {ai_response}")
+
+        sms_body = f"MASH_DEV ALERT: {ai_response}"
+        send_sms_alert(sms_body)
+
+        print(f"MISSION SUCCESS: Payment recieved and SMS sent to user!")
     return {"status": "success"}
+
+@app.post("/create-subscription")
+async def create_sub(email: str, price_id: str):
+
+    checkout_url = create_subscription_session(email, price_id)
+    return {"checkout_url": checkout_url}

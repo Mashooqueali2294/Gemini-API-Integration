@@ -2,33 +2,22 @@ import stripe
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
-# Stripe API Key set karein
+app = load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-def create_checkout_session(item_name, amount_pkr):
+def create_subscription_session(customer_email: str, price_id: str):
     try:
-        # Stripe hamesha "Cents" ya sabse choti unit mein paise leta hai
-        # Agar 500 PKR hai, toh humein 500 * 100 bhejna hoga
-        unit_amount = int(amount_pkr * 100)
 
         session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            payment_method_types=["card"],
+            customer_email=customer_email,
             line_items=[{
-                'price_data': {
-                    'currency': 'pkr',
-                    'product_data': {
-                        'name': item_name,
-                    },
-                    'unit_amount': unit_amount,
-                },
-                'quantity': 1,
+                "price": price_id,
+                "quantity": 1,
             }],
-            mode='payment',
-            success_url='https://example.com/success', # Payment hone ke baad yahan jayega
-            cancel_url='https://example.com/cancel',   # Cancel karne par yahan
+            success_url="https://your-domain.com/success",
+            cancel_url="https://your-domain.com/cancel",
         )
         return session.url
     except Exception as e:
-        return f"Stripe Error: {str(e)}"
+        return str(e)

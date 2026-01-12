@@ -1,26 +1,22 @@
 import os
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 
-# .env file se saari settings load karo
-load_dotenv()
+app =load_dotenv()
 
-# Key ko environment variable se uthao
 api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY missing in .env file")
 
-genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
 def get_ai_summary(old_val, new_val):
     try:
-        model = genai.GenerativeModel("gemini-pro")
-        prompt = f"""
-        Analyze this data change and give a 1-sentence professional summary:
-        old_value: {old_val}
-        new_value: {new_val}
-        summary:
-        """
-
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model = "gemini-2.5-flash",
+            contents=f"Write a 1-sentence professional summnary for a payment of {old_val} to {new_val}."
+        )
         return response.text.strip()
     except Exception as e:
-        return "Summary unavailable at the moment"
+        print("AI ERROR", e)
+        return "summary unavailable at the moment"
